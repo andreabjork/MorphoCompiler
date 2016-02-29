@@ -228,6 +228,7 @@ public class NanoMorpho {
 
         // CodeType.IF
         if( matches(NanoMorphoLexer.IF) ) {
+            // Note: If - elsif ... - elsif - else should become If - else (if - else (if - else ... ) ) )
             Vector<Object> collect = new Vector<>();
             collect.add(CodeType.IF);
             advance();
@@ -397,20 +398,38 @@ public class NanoMorpho {
                 return;
             case IF:
                 // e = {IF,cond,then,else}
+                /* CODE
+                        Code(cond)
+                        (GoFalse _L1)
+                        Code(then)
+                        (Go _L2)
+                   _L1:
+                        Code(else)
+                   _L2:
+
+                 */
                 int labElse = newLab();
                 int labEnd = newLab();
                 generateJump((Object[])e[1],0,labElse); // check condition
-                generateExpr((Object[])e[2]); // 'then' expr if condition was true (pos 0)
+                generateBody((Object[])e[2]); // 'then' expr if condition was true (pos 0)
                 emit("(Go _"+labEnd+")");
                 emit("_"+labElse+":");
-                generateExpr((Object[])e[3]); // 'else' expr if condition was false
+                generateBody((Object[])e[3]); // 'else' expr if condition was false
                 emit("_"+labEnd+":");
                 return;
             case WHILE:
                 // e = {WHILE, cond, body}
+                /* CODE:
+                    _L1:
+                        Code(cond)
+                        (GoFalse _L2)
+                        Code(body)
+                        (Go _L1)
+                    _L2:
+                 */
                 int labStart = newLab();
                 int labQuit = newLab();
-                emit("(Go_"+labStart); // start of while loop
+                emit("(_"+labStart); // start of while loop
                 generateJump((Object[])e[1], labStart, labQuit);
                 emit("(Go_"+labQuit);
                 return;
