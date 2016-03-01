@@ -23,6 +23,9 @@
 
 %public
 %class NanoMorphoLexer
+%line
+%column
+
 %unicode
 
 %{

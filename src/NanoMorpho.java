@@ -5,32 +5,29 @@ import java.io.*;
 import java.util.Vector;
 
 public class NanoMorpho {
-    private NanoMorphoLexer lexer;
-    private Yytoken next_token;
-    private String lexeme;
+    private static NanoMorphoLexer lexer;
+    private static Yytoken next_token;
+    private static String lexeme;
     // Inni í hverri fallsskilgreiningu inniheldur vars nöfnin
     // á viðföngunum í fallið (þ.e. leppunum eða breytunöfnunum
     // sem standa fyrir viðföngin), í sætum 1 og aftar.  Sæti
     // 0 inniheldur nafn fallsins sem verið er að skilgreina.
-    String[] vars;
+    private static String[] vars;
 
 
     // Eftirfarandi fastar standa fyrir allar þær
     // mögulegu gerðir af segðum sem milliþula
     // (intermediate code) getur innihaldið.
-    // Þessar fjórar gerðir segða (ásamt þeim
-    // möguleika að skrifa föll sem nota slíkar
-    // segðir) duga reyndar til að hægt sé að
-    // reikna hvað sem er reiknanlegt.
     enum CodeType {
         NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE
     };
 
 
-    // -------------
-    // 		UTIL
-    // -------------
-    private String advance() {
+    
+    // ----------------------------------------------------------------------------------
+    //                                  UTIL FUNCTIONS
+    // ----------------------------------------------------------------------------------
+    private static String advance() {
         try {
             next_token = lexer.yylex();
         }
@@ -44,13 +41,13 @@ public class NanoMorpho {
 
     }
     // Checks if next_token.number matches the token
-    private boolean matches(int token) {
+    private static boolean matches(int token) {
         return (next_token.number == token);
     }
 
-    // Checks if cursor is on tokenen with token 'token' and advances if it is.
+    // Checks if cursor is on token 'token' and advances if it is.
     // Throws an error if not.
-    private String assume(int token) {
+    private static String assume(int token) {
         String res = lexeme;
         if(matches(token)) {
             advance();
@@ -60,7 +57,7 @@ public class NanoMorpho {
         return res;
     }
 
-    private String tokenName( int token ) {
+    private static String tokenName( int token ) {
         switch(token) {
             case NanoMorphoLexer.IF:		return "if";
             case NanoMorphoLexer.NAME:		return "name";
@@ -77,11 +74,11 @@ public class NanoMorpho {
         return "'"+(char)token+"'";
     }
 
-    private void expected( int token ) {
+    private static void expected( int token ) {
         expected(tokenName(token));
     }
 
-    private void expected( String exp ) {
+    private static void expected( String exp ) {
         System.err.println("Expected "+exp+", found "+next_token.string+" in line "+lexer.getLine()+", column "+lexer.getColumn());
         System.exit(1);
     }
@@ -91,17 +88,18 @@ public class NanoMorpho {
     //         falls.  name er nafnið á einhverju viðfangi í fallið.
     // Eftir:  i er staðsetning viðfangsins í viðfangarunu fallsins
     //         þar sem fyrsta viðfang er talið vera í sæti 0.
-    int varPos( String name )
+    private static int varPos( String name )
     {
         for( int i=1 ; i!=vars.length ; i++ )
             if( vars[i].equals(name) ) return i-1;
         throw new Error("Variable "+name+" is not defined");
     }
 
-    // -----------------------------
-    //    PARSER - INTERMEDIATE CODE
-    // -----------------------------
-    private Object[] program() {
+    
+    // ----------------------------------------------------------------------------------
+    //                            PARSER - INTERMEDIATE CODE
+    // ----------------------------------------------------------------------------------
+    private static Object[] program() {
         Vector<Object> collect = new Vector<>();
         collect.add(function());
         while( !matches(NanoMorphoLexer.EOF) ) collect.add(function());
@@ -109,7 +107,7 @@ public class NanoMorpho {
         return collect.toArray();
     }
 
-    private Object[] function() {
+    private static Object[] function() {
         // args is the arguments vector
         Vector<String> args = new Vector<String>();
         args.add(assume(NanoMorphoLexer.NAME));
@@ -117,18 +115,17 @@ public class NanoMorpho {
         if( matches(NanoMorphoLexer.NAME) ) {
             args.add(advance());
             while( matches(',') ) {
-                args.add(advance());
-                assume(NanoMorphoLexer.NAME);
+                advance();
+                args.add(assume(NanoMorphoLexer.NAME));
             }
         }
         assume(')');
         assume('{');
 
-        int varcount = 0;
+        int argCount = args.size()-1;
         while( matches(NanoMorphoLexer.VAR) ) {
-            decl();
+            decl(args);
             assume(';');
-            varcount++;
         }
 
         // args to an array
@@ -137,8 +134,8 @@ public class NanoMorpho {
         // define our collect object {fname, argcount, varcount, expr0 ... exprN}
         Vector<Object> collect = new Vector<>();
         collect.add(vars[0]); // function name
-        collect.add(vars.length-1); // number of function arguments
-        collect.add(varcount); // number of variable declarations
+        collect.add(argCount); // number of function arguments
+        collect.add(vars.length-1-argCount); // number of variable declarations
 
         collect.add(expr());
         assume(';');
@@ -153,16 +150,16 @@ public class NanoMorpho {
     }
 
     // Don't need to collect here because we only need the number of declarations???
-    private void decl() {
+    private static void decl(Vector<String> args) {
         assume(NanoMorphoLexer.VAR);
-        assume(NanoMorphoLexer.NAME);
+        args.add(assume(NanoMorphoLexer.NAME));
         while( matches(',') ) {
             advance();
-            assume(NanoMorphoLexer.NAME);
+            args.add(assume(NanoMorphoLexer.NAME));
         }
     }
 
-    private Object[] expr() {
+    private static Object[] expr() {
         Vector<Object> collect = new Vector<>();
         collect.add(small_expr());
         while( matches(NanoMorphoLexer.OPERATOR) ) {
@@ -173,17 +170,18 @@ public class NanoMorpho {
         return collect.toArray();
     }
 
-    private Object[] small_expr() {
+    private static Object[] small_expr() {
         // CodeType.NAME, CodeType.ASSIGN or {expr0, expr1, ..., exprN}, this might be CALL ?
         if( matches(NanoMorphoLexer.NAME) ) {
+            String lexName = lexeme;
             advance();
             // return e = {CodeType.ASSIGN, name, expr()}
             if( matches('=') ) {
                 advance();
-                return new Object[]{CodeType.ASSIGN, varPos(lexeme), expr()};
+                return new Object[]{CodeType.ASSIGN, varPos(lexName), expr()};
             }
             // return e = {CodeType.NAME, name}
-            if( !matches('(') ) return new Object[]{CodeType.NAME, varPos(lexeme)};
+            if( !matches('(') ) return new Object[]{CodeType.NAME, varPos(lexName)};
 
             advance();
 
@@ -236,17 +234,20 @@ public class NanoMorpho {
             collect.add(expr()); // condition
             assume(')');
             collect.add(body()); // 'then' expression
+            collect.add(elseBody());
+            /*Object elseBody:    
             while( matches(NanoMorphoLexer.ELSIF) ) {
                 advance();
                 assume('(');
-                collect.add(expr()); // elif condition
+                Object cond = expr(); // elif condition
                 assume(')');
-                collect.add(body()); // elif expression
+                Object thenBody = body(); // elif expression
+                elseBody = new Object[]{CodeType.IF, cond, thenBody, elseBody};
             }
             if( matches(NanoMorphoLexer.ELSE) ) {
                 advance();
-                collect.add(body()); // 'else' expression
-            }
+                Object elseBody = body(); // 'else' expression
+            }*/
 
             return collect.toArray();
         }
@@ -265,8 +266,22 @@ public class NanoMorpho {
         return null; // Fix this
     }
 
+    private static Object[] elseBody() {
+        if(matches(NanoMorphoLexer.ELSE)) {
+            advance();
+            return body();
+        } else if(matches(NanoMorphoLexer.ELSIF)) {
+            advance();
+            assume('(');
+            Object cond = expr();
+            assume(')');
+            Object thenBody = body();
+            return new Object[]{CodeType.IF, cond, thenBody, elseBody()};
+        } else return null;
+    }
+
     // CodeType.BODY
-    private Object[] body() {
+    private static Object[] body() {
         Vector<Object> collect = new Vector<>();
 
         assume('{');
@@ -282,18 +297,18 @@ public class NanoMorpho {
     }
 
 
-    // -----------------
-    //    FINAL CODE
-    // -----------------
+    // ----------------------------------------------------------------------------------
+    //                                     FINAL CODE
+    // ----------------------------------------------------------------------------------
 
     // Use: emit(line);
     // Pre:  line er lína í lokaþulu.
     // Post:  Búið er að skrifa línuna á aðalúttak.
-    private void emit( String line ) {
+    private static void emit( String line ) {
         System.out.println(line);
     }
 
-   private void generateProgram(String name, Object[] p) {
+   private static void generateProgram(String name, Object[] p) {
         // p = {function0, function1, ..., functionN}
         emit("\""+name+".mexe\" = main in");
         emit("!{{");
@@ -301,7 +316,7 @@ public class NanoMorpho {
         emit("}}*BASIS;");
     }
 
-    private void generateFunction(Object[] f) {
+    private static void generateFunction(Object[] f) {
         // f = {fname, argcount, varcount, expr0, expr1, ..., exprN}
         String fname = (String)f[0];
         int argcount = (Integer)f[1];
@@ -311,7 +326,10 @@ public class NanoMorpho {
         // Fetch the values from the var declarations and put them on the stack:
         // If there are n arguments to the function, the declarations must be
         // n+1, n+2, ... , n+numVarDeclarations
-        for(int i=argcount; i<argcount+varcount; i++) emit("(Fetch "+i+")");
+        for(int i=argcount; i<argcount+varcount; i++) {
+            emit("(MakeVal null)");
+            emit("(Push)");
+        }
         for(int i=3; i!=f.length; i++) generateExpr((Object[])f[i]);
         emit("]");
     }
@@ -329,8 +347,13 @@ public class NanoMorpho {
         return nextLab++;
     }
 
+    private static void generateExpr(Object[] e) {
+        for(int i=0; i!=e.length; i++) generateSmallExpr((Object[])e[i]);
+    }
+
     // Needs to handle: NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE
-    private void generateExpr(Object[] e) {
+    private static void generateSmallExpr(Object[] e) {
+        // e = {CodeType, ...}
         switch( (CodeType)e[0] ) {
             case NAME:
                 // e = {NAME,nameLoc}
@@ -393,11 +416,12 @@ public class NanoMorpho {
                 Code(expr()) -> ac
                 (Call "OPsymbol[f1]" 1)
                  */
-                generateExpr((Object[])e[2]);
+                generateSmallExpr((Object[])e[2]);
                 emit("(Call \""+e[1]+"[f1]\" "+1);
                 return;
             case IF:
                 // e = {IF,cond,then,else}
+                // Viljum að then expr sé annað if else expr ef um elsif er að ræða
                 /* CODE
                         Code(cond)
                         (GoFalse _L1)
@@ -429,9 +453,11 @@ public class NanoMorpho {
                  */
                 int labStart = newLab();
                 int labQuit = newLab();
-                emit("(_"+labStart); // start of while loop
-                generateJump((Object[])e[1], labStart, labQuit);
-                emit("(Go_"+labQuit);
+                emit("_"+labStart+":"); // start of while loop
+                generateJump((Object[])e[1], 0, labQuit);
+                generateBody((Object[])e[2]);
+                emit("(Go_"+labStart+")");
+                emit("_"+labQuit+":");
                 return;
         }
     }
@@ -446,7 +472,7 @@ public class NanoMorpho {
     //         annars stökki til labFalse.  Ef annað merkið
     //         er núll þá er það jafngilt merki sem er rétt
     //         fyrir aftan þulu segðarinnar.
-    private void generateJump( Object[] e, int labTrue, int labFalse ) {
+    private static void generateJump( Object[] e, int labTrue, int labFalse ) {
         switch( (CodeType)e[0] ) {
             case LITERAL:
                 String literal = (String)e[1];
@@ -475,7 +501,7 @@ public class NanoMorpho {
     //         framleiða.  Þulan er samt ekki endilega sú
     //         sama og þessi köll framleiða því tilgangurinn
     //         er að geta framleitt betri þulu.
-    private void generateJumpP( Object[] e, int labTrue, int labFalse ) {
+    private static void generateJumpP( Object[] e, int labTrue, int labFalse ) {
         switch( (CodeType)e[0] )
         {
             case LITERAL:
@@ -504,7 +530,7 @@ public class NanoMorpho {
     //         framleiða.  Þulan er samt ekki endilega sú
     //         sama og þessi köll framleiða því tilgangurinn
     //         er að geta framleitt betri þulu.
-    private void generateExprR( Object[] e ) {
+    private static void generateExprR( Object[] e ) {
         switch( (CodeType)e[0] )
         {
             case NAME:
@@ -546,7 +572,7 @@ public class NanoMorpho {
     //         framleiða.  Þulan er samt ekki endilega sú
     //         sama og þessi köll framleiða því tilgangurinn
     //         er að geta framleitt betri þulu.
-    private void generateExprP( Object[] e ) {
+    private static void generateExprP( Object[] e ) {
         switch( (CodeType)e[0] )
         {
             case NAME:
@@ -580,15 +606,20 @@ public class NanoMorpho {
     }
 
 
-    private void generateBody(Object[] intermediate) {
+    private static void generateBody(Object[] e) {
+        // e = {expr0, expr1, ..., exprN}
+        for(int i=0; i<e.length; i++) {
+            generateExpr((Object[])e[i]);
+        }
     }
 
 
 
-    // -----------
-    //    MAIN
-    // -----------
-     public void main( String args[] ) throws Exception {
+    
+    // ----------------------------------------------------------------------------------
+    //                                       MAIN
+    // ----------------------------------------------------------------------------------
+     public static void main( String args[] ) throws Exception {
         lexer = new NanoMorphoLexer(new FileReader(args[0]));
         advance();
         Object[] intermediate = program();
