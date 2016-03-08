@@ -1,5 +1,14 @@
 /**
  * Created by andrea on 27.2.2016.
+ * TODO's
+ * - Passa að breytur geti ekki verið teknar inn tvisvar  -> args.add
+ * - Breyta Push - MakeVal í MakeValP, Push-Return í ReturnP, CallR o.s.frv.
+ * - Bæta við &&, || o.þ.h
+ * - Skipta í NanoMorphoParser og Lokaþuluklasa
+ * - Gera Makefile
+ *
+ *
+ * Ath með recursion í expr+expr, smallexpr og expr, etc.
  */
 import java.io.*;
 import java.util.Vector;
@@ -19,7 +28,7 @@ public class NanoMorpho {
     // mögulegu gerðir af segðum sem milliþula
     // (intermediate code) getur innihaldið.
     enum CodeType {
-        NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE
+        NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE, ELSE
     };
 
 
@@ -88,6 +97,7 @@ public class NanoMorpho {
     //         falls.  name er nafnið á einhverju viðfangi í fallið.
     // Eftir:  i er staðsetning viðfangsins í viðfangarunu fallsins
     //         þar sem fyrsta viðfang er talið vera í sæti 0.
+    // TODO: Remember to make it check if we have that variable before
     private static int varPos( String name )
     {
         for( int i=1 ; i!=vars.length ; i++ )
@@ -163,6 +173,7 @@ public class NanoMorpho {
         Vector<Object> collect = new Vector<>();
         collect.add(small_expr());
         while( matches(NanoMorphoLexer.OPERATOR) ) {
+            collect.add(lexeme); 
             advance();
             collect.add(small_expr());
         }
@@ -185,20 +196,21 @@ public class NanoMorpho {
 
             advance();
 
+            Vector<Object> args = new Vector<>();
             if( matches(')') ) {
                 advance();
+                return new Object[]{CodeType.CALL, lexName, args.toArray()};
             }
 
             // e = {CodeType.CALL, fname, expr ... expr}
             // Since arguments are expressions, store them in their own vector:
-            Vector<Object> args = new Vector<>();
             args.add(expr());
             while( matches(',') ) {
                 advance();
                 args.add(expr());
             }
             assume(')');
-            return new Object[]{CodeType.CALL, lexeme, args};
+            return new Object[]{CodeType.CALL, lexName, args.toArray()};
         }
 
         // CodeType.RETURN
@@ -208,13 +220,15 @@ public class NanoMorpho {
         }
         // CodeType.OP
         if( matches(NanoMorphoLexer.OPERATOR) ) {
+            String lexName = lexeme;
             advance();
-            return new Object[]{CodeType.OP, lexeme, small_expr()};
+            return new Object[]{CodeType.OP, lexName, small_expr()};
         }
         // CodeType.LITERAL
         if( matches(NanoMorphoLexer.LITERAL) ) {
+            String lexName = lexeme;
             advance();
-            return new Object[]{CodeType.LITERAL, lexeme};
+            return new Object[]{CodeType.LITERAL, lexName};
         }
 
         // Need to check if this requires a specific intermediate
@@ -233,8 +247,11 @@ public class NanoMorpho {
             assume('(');
             collect.add(expr()); // condition
             assume(')');
+            
             collect.add(body()); // 'then' expression
-            collect.add(elseBody());
+
+            if(matches(NanoMorphoLexer.ELSIF) || matches(NanoMorphoLexer.ELSE))
+                collect.add(elseBody());
             /*Object elseBody:    
             while( matches(NanoMorphoLexer.ELSIF) ) {
                 advance();
@@ -269,7 +286,7 @@ public class NanoMorpho {
     private static Object[] elseBody() {
         if(matches(NanoMorphoLexer.ELSE)) {
             advance();
-            return body();
+            return new Object[]{CodeType.ELSE, body()};
         } else if(matches(NanoMorphoLexer.ELSIF)) {
             advance();
             assume('(');
@@ -331,7 +348,8 @@ public class NanoMorpho {
             emit("(Push)");
         }
         for(int i=3; i!=f.length; i++) generateExpr((Object[])f[i]);
-        emit("]");
+        emit("(Return)");
+        emit("];");
     }
 
 
@@ -342,13 +360,30 @@ public class NanoMorpho {
     //         verið skilað úr þessu falli.  Tilgangurinn
     //         er að búa til nýtt merki (label), sem er
     //         ekki það sama og neitt annað merki.
-    static int newLab()
-    {
+    static int newLab() {
         return nextLab++;
     }
 
     private static void generateExpr(Object[] e) {
-        for(int i=0; i!=e.length; i++) generateSmallExpr((Object[])e[i]);
+        // e = {expr} eða e = {expr, op, expr, op, expr, ... , op, expr}
+        // generateSmallExpr()
+        // (Push)
+        // generateSmallExpr();
+        // (Call #opf[2] 2)
+        // (Push) // Setja gildið í accumulator
+        // generateSmallExpr();
+        // (Call #opf[2] 2)
+        // ...
+        // (Call #opf[2] 2) 
+        generateSmallExpr((Object[])e[0]); // Alltaf fyrir fyrsta expr
+        if(e.length == 1) return;
+        for(int i=1; i!=e.length-1; i++) {
+            // Put our last expr on the stack
+            emit("(Push)");
+            String op = e[i].toString();
+            generateSmallExpr((Object[])e[i+1]);
+            emit("(Call #\""+op+"[f"+2+"]\" "+2+")");
+        }
     }
 
     // Needs to handle: NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE
@@ -384,7 +419,7 @@ public class NanoMorpho {
                     Code(args[0]) -> Stored in ac
                     (Push)  -> Pushed to stack
                     Code(args[1]) -> Stored in ac
-                    (Push) -> Pushed to stack
+                    (Push)-> Pushed to stack
                     .
                     .
                     .
@@ -406,7 +441,7 @@ public class NanoMorpho {
                 /* CODE
                 Code(expr())
                 (Return)
-                 */
+                 */ 
                 generateExpr((Object[])e[1]);
                 emit("(Return)");
                 return;
@@ -438,8 +473,11 @@ public class NanoMorpho {
                 generateBody((Object[])e[2]); // 'then' expr if condition was true (pos 0)
                 emit("(Go _"+labEnd+")");
                 emit("_"+labElse+":");
-                generateBody((Object[])e[3]); // 'else' expr if condition was false
+                generateSmallExpr((Object[])e[3]); // 'else' expr if condition was false.note this wasn't small expr!
                 emit("_"+labEnd+":");
+                return;
+            case ELSE:
+                generateBody((Object[])e[1]);
                 return;
             case WHILE:
                 // e = {WHILE, cond, body}
@@ -456,11 +494,21 @@ public class NanoMorpho {
                 emit("_"+labStart+":"); // start of while loop
                 generateJump((Object[])e[1], 0, labQuit);
                 generateBody((Object[])e[2]);
-                emit("(Go_"+labStart+")");
+                emit("(Go _"+labStart+")");
                 emit("_"+labQuit+":");
                 return;
         }
     }
+
+    private static void generateBody(Object[] e) {
+        // e = {expr0, expr1, ..., exprN}
+        for(int i=0; i<e.length; i++) {
+            generateExpr((Object[])e[i]);
+        }
+    }
+
+
+
 
     // Notkun: generateJump(e,labTrue,labTrue);
     // Fyrir:  e er milliþula fyrir segð, labTrue og
@@ -473,7 +521,7 @@ public class NanoMorpho {
     //         er núll þá er það jafngilt merki sem er rétt
     //         fyrir aftan þulu segðarinnar.
     private static void generateJump( Object[] e, int labTrue, int labFalse ) {
-        switch( (CodeType)e[0] ) {
+        /*switch( (CodeType)e[0] ) {
             case LITERAL:
                 String literal = (String)e[1];
                 if( literal.equals("false") || literal.equals("null") )
@@ -487,7 +535,10 @@ public class NanoMorpho {
                 generateExpr(e);
                 if( labTrue!=0 ) emit("(GoTrue _"+labTrue+")");
                 if( labFalse!=0 ) emit("(GoFalse _"+labFalse+")");
-        }
+        }*/
+        generateExpr(e);
+        if( labTrue!=0 ) emit("(GoTrue _"+labTrue+")");
+        if( labFalse!=0 ) emit("(GoFalse _"+labFalse+")");
     }
 
     // Notkun: generateJumpP(e,labTrue,labFalse);
@@ -606,19 +657,14 @@ public class NanoMorpho {
     }
 
 
-    private static void generateBody(Object[] e) {
-        // e = {expr0, expr1, ..., exprN}
-        for(int i=0; i<e.length; i++) {
-            generateExpr((Object[])e[i]);
-        }
-    }
-
-
 
     
     // ----------------------------------------------------------------------------------
     //                                       MAIN
     // ----------------------------------------------------------------------------------
+    // Prófað með því að pípa úttakinu í test.masm skrá og compilea með
+    // java -jar morpho.jar -c test.masm
+    // og þá verður til test.mexe sem má keyra með java -jar morpho.jar test
      public static void main( String args[] ) throws Exception {
         lexer = new NanoMorphoLexer(new FileReader(args[0]));
         advance();

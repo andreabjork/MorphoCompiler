@@ -16,3 +16,8 @@ b(varA, varB){
 		return b;
 	};
 }
+
+
+main() {
+	2;
+}
