@@ -1,4 +1,4 @@
-/**
+    /**
  * Created by andrea on 27.2.2016.
  * TODO's
  * - Passa að breytur geti ekki verið teknar inn tvisvar  -> args.add
@@ -17,6 +17,7 @@ public class NanoMorpho {
     private static NanoMorphoLexer lexer;
     private static Yytoken next_token;
     private static String lexeme;
+    private static PrintWriter writer; 
     // Inni í hverri fallsskilgreiningu inniheldur vars nöfnin
     // á viðföngunum í fallið (þ.e. leppunum eða breytunöfnunum
     // sem standa fyrir viðföngin), í sætum 1 og aftar.  Sæti
@@ -28,7 +29,7 @@ public class NanoMorpho {
     // mögulegu gerðir af segðum sem milliþula
     // (intermediate code) getur innihaldið.
     enum CodeType {
-        NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE, ELSE
+        NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE, ELSE, PRIOR
     };
 
 
@@ -105,6 +106,16 @@ public class NanoMorpho {
         throw new Error("Variable "+name+" is not defined");
     }
 
+    private static void addVar(  Vector<String> vars, String name) {
+        for( int i=1 ; i!=vars.size() ; i++ ) {
+            if( vars.get(i).equals(name) ) {
+                System.err.println("Error: Variable "+name+" exists.");
+                System.exit(1);
+            }
+        }
+
+        vars.add(name);
+    }
     
     // ----------------------------------------------------------------------------------
     //                            PARSER - INTERMEDIATE CODE
@@ -159,13 +170,12 @@ public class NanoMorpho {
         return collect.toArray();
     }
 
-    // Don't need to collect here because we only need the number of declarations???
     private static void decl(Vector<String> args) {
         assume(NanoMorphoLexer.VAR);
-        args.add(assume(NanoMorphoLexer.NAME));
+        addVar(args, assume(NanoMorphoLexer.NAME));
         while( matches(',') ) {
             advance();
-            args.add(assume(NanoMorphoLexer.NAME));
+            addVar(args, assume(NanoMorphoLexer.NAME));
         }
     }
 
@@ -234,8 +244,9 @@ public class NanoMorpho {
         // Need to check if this requires a specific intermediate
         if( matches('(') ) {
             advance();
-            expr();
+            Object[] e = expr();
             assume(')');
+            return new Object[]{CodeType.PRIOR, e};
         }
 
         // CodeType.IF
@@ -252,19 +263,7 @@ public class NanoMorpho {
 
             if(matches(NanoMorphoLexer.ELSIF) || matches(NanoMorphoLexer.ELSE))
                 collect.add(elseBody());
-            /*Object elseBody:    
-            while( matches(NanoMorphoLexer.ELSIF) ) {
-                advance();
-                assume('(');
-                Object cond = expr(); // elif condition
-                assume(')');
-                Object thenBody = body(); // elif expression
-                elseBody = new Object[]{CodeType.IF, cond, thenBody, elseBody};
-            }
-            if( matches(NanoMorphoLexer.ELSE) ) {
-                advance();
-                Object elseBody = body(); // 'else' expression
-            }*/
+
 
             return collect.toArray();
         }
@@ -322,7 +321,8 @@ public class NanoMorpho {
     // Pre:  line er lína í lokaþulu.
     // Post:  Búið er að skrifa línuna á aðalúttak.
     private static void emit( String line ) {
-        System.out.println(line);
+        //System.out.println(line);
+        writer.println(line);
     }
 
    private static void generateProgram(String name, Object[] p) {
@@ -453,6 +453,9 @@ public class NanoMorpho {
                  */
                 generateSmallExpr((Object[])e[2]);
                 emit("(Call \""+e[1]+"[f1]\" "+1);
+                return;
+            case PRIOR:
+                generateExpr((Object[])e[1]);
                 return;
             case IF:
                 // e = {IF,cond,then,else}
@@ -656,20 +659,26 @@ public class NanoMorpho {
         }
     }
 
-
-
     
     // ----------------------------------------------------------------------------------
     //                                       MAIN
     // ----------------------------------------------------------------------------------
-    // Prófað með því að pípa úttakinu í test.masm skrá og compilea með
-    // java -jar morpho.jar -c test.masm
-    // og þá verður til test.mexe sem má keyra með java -jar morpho.jar test
+    // morpho: java -jar morpho.jar
+    // 
+    // Compile & Run með
+    // 
+    //      java NanoMorpho program
+    //      morpho -c program.mexe
+    //      morpho program
      public static void main( String args[] ) throws Exception {
         lexer = new NanoMorphoLexer(new FileReader(args[0]));
         advance();
         Object[] intermediate = program();
         if( !matches(NanoMorphoLexer.EOF) ) expected("EOF or function name");
-        generateProgram("test", intermediate);
+        
+        writer = new PrintWriter(args[0]+".masm", "UTF-8");    
+        generateProgram(args[0], intermediate);
+        writer.close();
+
     }
 }
