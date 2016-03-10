@@ -511,8 +511,6 @@ public class NanoMorpho {
     }
 
 
-
-
     // Notkun: generateJump(e,labTrue,labTrue);
     // Fyrir:  e er milliþula fyrir segð, labTrue og
     //         labFalse eru heiltölur sem standa fyrir
@@ -524,21 +522,6 @@ public class NanoMorpho {
     //         er núll þá er það jafngilt merki sem er rétt
     //         fyrir aftan þulu segðarinnar.
     private static void generateJump( Object[] e, int labTrue, int labFalse ) {
-        /*switch( (CodeType)e[0] ) {
-            case LITERAL:
-                String literal = (String)e[1];
-                if( literal.equals("false") || literal.equals("null") )
-                {
-                    if( labFalse!=0 ) emit("(Go _"+labFalse+")");
-                    return;
-                }
-                if( labTrue!=0 ) emit("(Go _"+labTrue+")");
-                return;
-            default:
-                generateExpr(e);
-                if( labTrue!=0 ) emit("(GoTrue _"+labTrue+")");
-                if( labFalse!=0 ) emit("(GoFalse _"+labFalse+")");
-        }*/
         generateExpr(e);
         if( labTrue!=0 ) emit("(GoTrue _"+labTrue+")");
         if( labFalse!=0 ) emit("(GoFalse _"+labFalse+")");
@@ -572,48 +555,6 @@ public class NanoMorpho {
                 generateExprP(e);
                 if( labTrue!=0 ) emit("(GoTrue _"+labTrue+")");
                 if( labFalse!=0 ) emit("(GoFalse _"+labFalse+")");
-        }
-    }
-
-    // Notkun: generateExpr(e);
-    // Fyrir:  e er milliþula fyrir segð.
-    // Eftir:  Þetta kall býr til lokaþulu sem er jafngild
-    //         þulunni sem köllin
-    //            generateExpr(e);
-    //            emit("(Return)");
-    //         framleiða.  Þulan er samt ekki endilega sú
-    //         sama og þessi köll framleiða því tilgangurinn
-    //         er að geta framleitt betri þulu.
-    private static void generateExprR( Object[] e ) {
-        switch( (CodeType)e[0] )
-        {
-            case NAME:
-                // e = {NAME,name}
-                emit("(FetchR "+e[1]+")");
-                return;
-            case LITERAL:
-                // e = {LITERAL,literal}
-                emit("(MakeValR "+(String)e[1]+")");
-                return;
-            case IF:
-                // e = {IF,cond,then,else}
-                int labElse = newLab();
-                generateJump((Object[])e[1],0,labElse);
-                generateExprR((Object[])e[2]);
-                emit("_"+labElse+":");
-                generateExprR((Object[])e[3]);
-                return;
-            case CALL:
-                // e = {CALL,name,args}
-                Object[] args = (Object[])e[2];
-                int i;
-                for( i=0 ; i!=args.length ; i++ )
-                    if( i==0 )
-                        generateExpr((Object[])args[i]);
-                    else
-                        generateExprP((Object[])args[i]);
-                emit("(CallR #\""+e[1]+"[f"+i+"]\" "+i+")");
-                return;
         }
     }
 
@@ -659,7 +600,6 @@ public class NanoMorpho {
         }
     }
 
-    
     // ----------------------------------------------------------------------------------
     //                                       MAIN
     // ----------------------------------------------------------------------------------
