@@ -1,0 +1,51 @@
+"LexerTest.mexe" = main in
+!{{
+#"b[f2]" = 
+[
+(MakeVal null)
+(Push)
+(MakeVal null)
+(Push)
+(MakeVal null)
+(Push)
+(MakeVal null)
+(Push)
+(MakeVal null)
+(Push)
+(MakeVal null)
+(Push)
+(MakeVal null)
+(Push)
+_1:
+(MakeVal true)
+(GoFalse _2)
+(MakeVal 2)
+(Push)
+(MakeVal 2)
+(Call #"+[f2]" 2)
+(Go _1)
+_2:
+(MakeVal true)
+(GoFalse _3)
+(MakeVal false)
+(Return)
+(Go _4)
+_3:
+(Fetch 4)
+(GoFalse _5)
+(Fetch 2)
+(Return)
+(Go _6)
+_5:
+(Fetch 3)
+(Return)
+_6:
+_4:
+(Return)
+];
+#"main[f0]" = 
+[
+(MakeVal 2)
+(Return)
+];
+}}*BASIS;
