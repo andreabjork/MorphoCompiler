@@ -7,5 +7,5 @@ fibo(n) {
 }
 
 main() {
-	writeln("fibonacci concatenation BAM " ++ fibo(30));
+	writeln("fibonacci 30" ++ fibo(30));
 }

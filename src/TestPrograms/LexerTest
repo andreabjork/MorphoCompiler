@@ -1,5 +1,4 @@
 b(varA, varB){
-	var a, c;
 	var a, b, c, d, e, f;
 	var summa;
 	;;a = "foo";
