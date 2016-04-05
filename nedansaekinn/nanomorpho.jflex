@@ -45,58 +45,6 @@ public NanoMorphoLexer( java.io.Reader r, NanoMorphoParser yyparser )
 	this.yyparser = yyparser;
 }
 
-static public final int IF = 1;
-static public final int NAME = 2;
-static public final int LITERAL = 4;
-static public final int VAR = 5;
-static public final int WHILE = 6;
-static public final int ELSIF = 7;
-static public final int ELSE = 8;
-static public final int RETURN = 9;
-static public final int OPERATOR = 10;
-
-static public final int ERR = -1;
-static public final int EOF = -2;
-static private Yytoken next_token;
-static private NanoMorphoLexer lexer;
-
-static private void advance()
-	{
-		try
-		{
-			next_token = lexer.yylex();
-		}
-		catch (Exception e)
-		{
-			throw new Error(e);
-		}
-		if( next_token == null )
-		{
-			next_token = new Yytoken(NanoMorphoLexer.EOF,"EOF");
-		}
-	}
-
-static public void main( String args[] )
-	{
-		try {
-		
-			lexer = new NanoMorphoLexer(new java.io.FileReader(args[0]));
-			java.io.BufferedWriter out = new java.io.BufferedWriter(new java.io.FileWriter("lexemes"));
-			
-			advance();
-			
-			while( next_token.number != NanoMorphoLexer.EOF) {
-				out.write(next_token.number+": "+next_token);
-				out.newLine();
-				advance();
-			}
-			out.close();
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 %}
 
   /* Reglulegar skilgreiningar */

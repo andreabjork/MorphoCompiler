@@ -1,0 +1,24 @@
+Jflex:
+
+java -jar jflex-1.6.0.jar nanomorpho.jflex
+
+byacc:
+
+./byacc.exe -J -Jclass=NanoMorphoParser -v nanomorpho.byaccj
+
+
+Java compile:
+
+javac NanoMorphoLexer.java NanoMorphoParser.java NanoMorphoParserVal.java
+
+Keyrsla:
+
+java NanoMorphoParser LexerTest2
+
+Til verður masm skrá, compilea hana með
+
+java -jar morpho.jar -c LexerTest2.masm
+
+Þá verður til mexe skrá sem er keyrð með
+
+java -jar morpho.jar LexerTest2

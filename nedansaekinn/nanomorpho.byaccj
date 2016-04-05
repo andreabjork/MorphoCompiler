@@ -3,14 +3,8 @@
 	import java.util.*;
 %}
 
-%left OP1
-%right OP2
-%left OP3
-%left OP4
-%left OP5
-%left OP6
-%left OP7
-%token <sval> OP1,OP2,OP3,OP4,OP5,OP6,OP7
+%left OPERATOR
+%token <sval> OPERATOR
 %token <sval> LITERAL,NAME
 %token IF,ELSE,ELSIF,WHILE,VAR
 %token RETURN,AND,OR,NOT
@@ -25,7 +19,7 @@
 %%
 
 start
-	:	program	{ generateProgram($1); }
+	:	program	{ generateProgram(name,((Vector<Object>)($1)).toArray()); }
 	;
 
 program
@@ -45,7 +39,7 @@ function
 			funcIm.add($2); // Add fname
 			funcIm.add($4); // Add ids (number of arguments)
 			funcIm.add($7); // Add decls
-			for(Object expr : ((Object[])exprs) ) funcIm.add(expr);
+			for(Object expr : ((Vector<Object>)$8) ) funcIm.add(expr);
 
 			$$=funcIm.toArray();
 		}
@@ -75,7 +69,7 @@ exprs
 
 expr
 	:	smallexpr op expr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
-	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$).add($1); );}
+	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
 	;
 
 
@@ -92,30 +86,24 @@ smallexpr
 	;
 
 op
-	: OP1 	{$$ = $1;}
-	| OP2 	{$$ = $1;}
-	| OP3 	{$$ = $1;}
-	| OP4 	{$$ = $1;}
-	| OP5 	{$$ = $1;}
-	| OP6 	{$$ = $1;}
-	| OP7 	{$$ = $1;}
+	: OPERATOR 	{$$ = $1;}
 	;
 
 fname
     : NAME   {$$ = $1;}
 
 ifexpr
-	:	IF '(' expr ')' body elsebody 	{$$ = new Object[]{CodeType.IF, $3, $5, $6}}
+	:	IF '(' expr ')' body elsebody 	{$$ = new Object[]{CodeType.IF, $3, $5, $6};}
 	;
 
 elsebody
-	:  /*empty*/ 	{$$ = null}
-	|  ELSIF '(' expr ')' body elsebody  {$$ = new Object[]{CodeType.IF, $3, $5, $6}}
-	|  ELSE body 	{$$ = new Object[]{CodeType.ELSE, $2}}
+	:  /*empty*/ 	{$$ = null;}
+	|  ELSIF '(' expr ')' body elsebody  {$$ = new Object[]{CodeType.IF, $3, $5, $6};}
+	|  ELSE body 	{$$ = new Object[]{CodeType.ELSE, $2};}
 	;
 
 body
-	:	'{' bodyexprs '}'	{$$ = bodyexprs} 			/*{expr0, expr1, ..., exprN}*/
+	:	'{' bodyexprs '}'	{$$ = $2;} 			/*{expr0, expr1, ..., exprN}*/
 	;
 
 bodyexprs
@@ -135,7 +123,15 @@ bodyexprs
 
 	private int varCount;
 	private HashMap<String,Integer> varTable;
-	...
+    static private String name;
+    private static NanoMorphoLexer lexer;
+    private static String lexeme;
+    private static PrintWriter writer;
+    // Inni í hverri fallsskilgreiningu inniheldur vars nöfnin
+    // á viðföngunum í fallið (þ.e. leppunum eða breytunöfnunum
+    // sem standa fyrir viðföngin), í sætum 1 og aftar.  Sæti
+    // 0 inniheldur nafn fallsins sem verið er að skilgreina.
+    private static String[] vars;
 
 	private void addVar( String name )
 	{
@@ -192,7 +188,7 @@ bodyexprs
 	  	throws IOException
 	{
 		NanoMorphoParser yyparser = new NanoMorphoParser(new FileReader(args[0]));
-		name = args[0].substring(0,args[0].lastIndexOf('.'));
+		name = args[0];//.substring(0,args[0].lastIndexOf('.'));
 		yyparser.yyparse();
 	}
 
@@ -200,8 +196,8 @@ bodyexprs
     // Pre:  line er lína í lokaþulu.
     // Post:  Búið er að skrifa línuna á aðalúttak.
     private static void emit( String line ) {
-        //System.out.println(line);
-        writer.println(line);
+        System.out.println(line);
+        //writer.println(line);
     }
 
    private static void generateProgram(String name, Object[] p) {
