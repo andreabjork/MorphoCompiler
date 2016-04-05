@@ -16,11 +16,11 @@
 %token RETURN,AND,OR,NOT
 %type <obj> program
 %type <obj> function
-%type <obj> body,args,arglist,bodyexprs
-%type <obj> expr,orexpr,andexpr
-%type <obj> notexpr,binopexpr,smallexpr,ifrest
-%type <ival> ids,idlist
-%type <sval> op,fname
+%type <obj> body,bodyexprs
+%type <obj> exprs, expr
+%type <obj> smallexpr, ifexpr, elsebody
+%type <ival> ids,decls, decl
+%type <sval> fname,op
 
 %%
 
@@ -45,7 +45,7 @@ function
 			funcIm.add($2); // Add fname
 			funcIm.add($4); // Add ids (number of arguments)
 			funcIm.add($7); // Add decls
-			for(Object expr : ((Object[])$8) ) funcIm.add(expr);
+			for(Object expr : ((Object[])exprs) ) funcIm.add(expr);
 
 			$$=funcIm.toArray();
 		}
@@ -58,35 +58,36 @@ ids
 	;
 
 decls
-	: /*empty*/     	{$$=new Vector<Object>();}
-	| decls decl ';'    { ((Vector<Object>)($1)).add($2); $$=$1; }
+	: /*empty*/     	{ $$=0;}
+	| decls decl ';'    { $$=$1+$2; }
 	;
 
 decl
-	:	/*empty*/		{ $$=0; }
+	:	/*empty*/		{ $$ = 0; }
 	|	decl ',' NAME		{ addVar($3); $$=$1+1; }
 	|	VAR NAME {addVar($2); $$=$$+1;}
 	;
 
 exprs
-	:	exprs expr  		{ ((Vector<Object>)($1)).add($2); $$=$1;}
-	|   expr 				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+    :   /*empty*/           {$$=new Vector<Object>();}
+	|	expr exprs  		{ ((Vector<Object>)($1)).add($2); $$=$1;}
 	;
 
 expr
-	:	expr op small_expr 	{ ((Vector<Object>)($1)).add($3); ((Vector<Object>)($1)).add($4); $$=$1;}
-	|	small_expr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$).add($1); );}
+	:	smallexpr op expr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
+	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$).add($1); );}
 	;
 
-small_expr
-	:	NAME 			{ $$ = new Object[]{CodeType.NAME, findVar($1)};} 						/*{CodeType.NAME, nameLoc}*/
+
+smallexpr
+	:	NAME 			            { $$ = new Object[]{CodeType.NAME, findVar($1)};} 						/*{CodeType.NAME, nameLoc}*/
 	|	NAME '=' expr				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), $3};} 		/*{CodeType.ASSIGN, argloc, expr()}*/
-	|	NAME '(' expr ')'				{ $$ = new Object[]{CodeType.CALL, $1, };} 				/*{CodeType.CALL, name, args}*/
-	|	RETURN expr				{ $$ = new Object[]{CodeType.RETURN, $2};} 						/*{CodeType.RETURN, expr}*/
-	|	op expr				{ $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
-	|	LITERAL				{ $$ = new Object[]{CodeType.LITERAL, $1};} 							/*{CodeType.LITERAL, literal}*/
+	|	NAME '(' ids ')'			{ $$ = new Object[]{CodeType.CALL, $1, $3};} 				/*{CodeType.CALL, name, args}*/
+	|	RETURN expr				    { $$ = new Object[]{CodeType.RETURN, $2};} 						/*{CodeType.RETURN, expr}*/
+	|	op expr				        { $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
+	|	LITERAL				        { $$ = new Object[]{CodeType.LITERAL, $1};} 							/*{CodeType.LITERAL, literal}*/
 	|	'(' expr ')'				{ $$ = new Object[]{CodeType.PRIOR, $2};} 					/*{CodeType.PRIOR, expr}*/
-	|	ifexpr				{ $$ = $1;} 							 								/*{CodeType.IF,cond,then,else}*/
+	|	ifexpr				        { $$ = $1;} 							 								/*{CodeType.IF,cond,then,else}*/
 	|	WHILE '(' expr ')' body 	{$$ = new Object[]{CodeType.WHILE, $3, $5};}					/*{CodeType.WHILE, cond, body}*/
 	;
 
@@ -100,22 +101,25 @@ op
 	| OP7 	{$$ = $1;}
 	;
 
+fname
+    : NAME   {$$ = $1;}
+
 ifexpr
-	:	IF '(' expr ')' body elseBody 	{$$ = new Object[]{CodeType.IF, $3, $5, $6}}
+	:	IF '(' expr ')' body elsebody 	{$$ = new Object[]{CodeType.IF, $3, $5, $6}}
 	;
 
-elseBody
+elsebody
 	:  /*empty*/ 	{$$ = null}
-	|  ELSIF '(' expr ')' body elseBody  {$$ = new Object[]{CodeType.IF, $3, $5, $6}}
+	|  ELSIF '(' expr ')' body elsebody  {$$ = new Object[]{CodeType.IF, $3, $5, $6}}
 	|  ELSE body 	{$$ = new Object[]{CodeType.ELSE, $2}}
 	;
 
 body
-	:	'{' bodyExprs '}'	{$$ = bodyExprs} 			/*{expr0, expr1, ..., exprN}*/
+	:	'{' bodyexprs '}'	{$$ = bodyexprs} 			/*{expr0, expr1, ..., exprN}*/
 	;
 
-bodyExprs
-	:	bodyExprs expr ';'		{ ((Vector<Object>)($1)).add($2); $$=$1; }
+bodyexprs
+	:	bodyexprs expr ';'		{ ((Vector<Object>)($1)).add($2); $$=$1; }
 	|	expr ';'				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1); }
 	;
 
@@ -160,7 +164,7 @@ bodyExprs
 			line = lexer.getLine()+1;
 			column = lexer.getColumn()+1;
 			if( yylval==null )
-				yylval = new MorphoParserVal(MorphoParser.yyname[yyl_return]);
+				yylval = new NanoMorphoParserVal(NanoMorphoParser.yyname[yyl_return]);
 			//System.out.println("Token: "+MorphoParser.yyname[yyl_return]+" Lexeme: "+yylval.sval);
 		}
 		catch (IOException e)
@@ -173,21 +177,21 @@ bodyExprs
 	public void yyerror( String error )
 	{
 		System.out.println("Error:  "+error);
-		System.out.println("Token:  "+MorphoParser.yyname[last_token_read]);
+		System.out.println("Token:  "+NanoMorphoParser.yyname[last_token_read]);
 		System.out.println("Line:   "+line);
 		System.out.println("Column: "+column);
 		System.exit(1);
 	}
 
-	public MorphoParser( Reader r )
+	public NanoMorphoParser( Reader r )
 	{
-		lexer = new MorphoLexer(r,this);
+		lexer = new NanoMorphoLexer(r,this);
 	}
 
 	public static void main( String args[] )
 	  	throws IOException
 	{
-		MorphoParser yyparser = new MorphoParser(new FileReader(args[0]));
+		NanoMorphoParser yyparser = new NanoMorphoParser(new FileReader(args[0]));
 		name = args[0].substring(0,args[0].lastIndexOf('.'));
 		yyparser.yyparse();
 	}

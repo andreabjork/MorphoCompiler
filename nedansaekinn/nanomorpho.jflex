@@ -25,8 +25,8 @@
 %class NanoMorphoLexer
 %line
 %column
-
 %unicode
+%byaccj
 
 %{
 
@@ -37,13 +37,13 @@ public int getColumn() { return yycolumn; }
 
 %{
 
-/*public NanoMorphoParser yyparser;
+public NanoMorphoParser yyparser;
 
-public NanoMorphoLexer( java.io.Reader r)
+public NanoMorphoLexer( java.io.Reader r, NanoMorphoParser yyparser )
 {
 	this(r);
 	this.yyparser = yyparser;
-}*/
+}
 
 static public final int IF = 1;
 static public final int NAME = 2;
@@ -115,44 +115,48 @@ _NAME=([:letter:]|[]|{_DIGIT})+
 %%
 
 {_DELIM} {
-	return new Yytoken(yycharat(0));
+	yyparser.yylval = new NanoMorphoParserVal(yytext());
+	return yycharat(0);
 }
 
 {_STRING} | {_FLOAT} | {_CHAR} | {_INT} | null | true | false {
-	return new Yytoken(LITERAL, yytext()); //NanoMorphoParser.LITERAL;
+	yyparser.yylval = new NanoMorphoParserVal(yytext());
+	return NanoMorphoParser.LITERAL;
 }
 
 
 {_OPERATOR} {
-	return new Yytoken(OPERATOR, yytext());
+	yyparser.yylval = new NanoMorphoParserVal(yytext());
+	return NanoMorphoParser.OPERATOR;
 }
 
 "if" {
-	return new Yytoken(IF, yytext()); //NanoMorphoParser.IF;
+	return NanoMorphoParser.IF;
 }
 
 "elsif" {
-	return new Yytoken(ELSIF, yytext()); //NanoMorphoParser.IF;
+	return NanoMorphoParser.ELSIF;
 }
 
 "else" {
-	return new Yytoken(ELSE, yytext()); //NanoMorphoParser.IF;
+	return NanoMorphoParser.ELSE;
 }
 
 "while" {
-	return new Yytoken(WHILE, yytext()); //NanoMorphoParser.IF;
+	return NanoMorphoParser.WHILE;
 }
 
 "var" {
-	return new Yytoken(VAR, yytext()); //NanoMorphoParser.DEFINE;
+	return NanoMorphoParser.VAR;
 }
 
 "return" {
-	return new Yytoken(RETURN, yytext()); //NanoMorphoParser.DEFINE;
+	return NanoMorphoParser.RETURN;
 }
 
 {_NAME} {
-	return new Yytoken(NAME,yytext()); //NanoMorphoParser.NAME;
+	yyparser.yylval = new NanoMorphoParserVal(yytext());
+	return NanoMorphoParser.NAME;
 }
 
 ";;".*$ {
@@ -162,5 +166,5 @@ _NAME=([:letter:]|[]|{_DIGIT})+
 }
 
 . {
-	return new Yytoken(ERR, "Error"); //NanoMorphoParser.YYERRCODE;
+	return NanoMorphoParser.YYERRCODE;
 }
