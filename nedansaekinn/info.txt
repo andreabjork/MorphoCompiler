@@ -22,3 +22,13 @@ java -jar morpho.jar -c LexerTest2.masm
 Þá verður til mexe skrá sem er keyrð með
 
 java -jar morpho.jar LexerTest2
+
+
+---------------- eða, linux megin:
+
+% jflex nanomorpho.jflex
+% byaccj -Jclass NanoMorphoParser -v nanomorpho.byaccj
+% javac NanoMorphoLexer.java NanoMorphoParser.java NanoMorphoParserVal.java
+% NanoMorphoParser LexerTest2
+% morpho -c LexerTest2.masm
+% morpho LexerTest2
