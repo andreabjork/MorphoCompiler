@@ -7,7 +7,7 @@
 %right RETURN
 %left OPERATOR
 %token <sval> OPERATOR
-%token <sval> LITERAL,NAME
+%token <sval> LITERAL,NAME /*Ath forgang*/
 %token IF,ELSE,ELSIF,WHILE,VAR
 %token RETURN,AND,OR,NOT
 %type <obj> program
@@ -41,18 +41,21 @@ function
 			funcIm.add($2); // Add fname
 			funcIm.add($4); // Add ids (number of arguments)
 			funcIm.add($7); // Add decls
-			for(Object expr : ((Vector<Object>)$8) ) funcIm.add(expr);
 
+            Object[] allExprs = ((Object[])($8));
+			for(Object[] expr : allExprs) funcIm.add(expr);
 			$$=funcIm.toArray();
 		}
 	;
 
-args	:	/*empty*/
-	|	nonEmptyArgs		
+args
+    :	/*empty*/      {$$ = new Vector<Object>();}
+	|	nonEmptyArgs   {((Vector<Object>)($$)).add($1);}
 	;
 
-nonEmptyArgs	:	nonEmptyArgs ',' expr
-		|	expr
+nonEmptyArgs
+        :	nonEmptyArgs ',' expr  { ((Vector<Object>)($1)).add($3); $$=$1; }
+		|	expr    { $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
 		;
 
 ids
@@ -73,22 +76,22 @@ decl
 	;
 
 exprs
-    	:   /*empty*/           {$$=new Vector<Object>();}
-	|	expr ';' exprs	{ ((Vector<Object>)($1)).add($3); $$=$1;}
+    :   /*empty*/           {$$=new Vector<Object>();}
+	|	expr ';' exprs	{ ((Vector<Object>)($3)).add(new Object[]{$1}); $$=$3;}
 	;
 
 expr
 	:	expr OPERATOR expr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
 	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
-	|	NAME '=' expr				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), $3};} 		/*{CodeType.ASSIGN, argloc, expr()}*/
-	|	RETURN expr				    { $$ = new Object[]{CodeType.RETURN, $2};} 						/*{CodeType.RETURN, expr}*/
+	|	NAME '=' expr				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), ((Vector<Object>)($3)).toArray()};} 		/*{CodeType.ASSIGN, argloc, expr()}*/
+	|	RETURN expr				    { $$ = new Object[]{CodeType.RETURN, ((Vector<Object>)($2)).toArray()};} 						/*{CodeType.RETURN, expr}*/
 	;
 
 
 smallexpr
 	:	NAME 			            { $$ = new Object[]{CodeType.NAME, findVar($1)};} 						/*{CodeType.NAME, nameLoc}*/
-	|	NAME '(' args ')'			{ $$ = new Object[]{CodeType.CALL, $1, $3};} 				/*{CodeType.CALL, name, args}*/
-	|	op smallexpr				        { $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
+	|	NAME '(' args ')'			{ $$ = new Object[]{CodeType.CALL, $1, ((Vector<Object>)($3)).toArray()};} 				/*{CodeType.CALL, name, args}*/
+	|	op smallexpr				{ $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
 	|	LITERAL				        { $$ = new Object[]{CodeType.LITERAL, $1};} 							/*{CodeType.LITERAL, literal}*/
 	|	'(' expr ')'				{ $$ = new Object[]{CodeType.PRIOR, $2};} 					/*{CodeType.PRIOR, expr}*/
 	|	ifexpr				        { $$ = $1;} 							 								/*{CodeType.IF,cond,then,else}*/
@@ -101,19 +104,20 @@ op
 
 fname
     : NAME   {$$ = $1;}
+    ;
 
 ifexpr
 	:	IF '(' expr ')' body elsebody 	{$$ = new Object[]{CodeType.IF, $3, $5, $6};}
 	;
 
 elsebody
-	:  /*empty*/ 	{$$ = null;}
+	:  /*empty*/ 	{$$ = null;} /*Should change this to an object of null, empty object or something else than null*/
 	|  ELSIF '(' expr ')' body elsebody  {$$ = new Object[]{CodeType.IF, $3, $5, $6};}
 	|  ELSE body 	{$$ = new Object[]{CodeType.ELSE, $2};}
 	;
 
 body
-	:	'{' bodyexprs '}'	{$$ = $2;} 			/*{expr0, expr1, ..., exprN}*/
+	:	'{' bodyexprs '}'	{$$ = ((Vector<Object>)($2)).toArray();} 			/*{expr0, expr1, ..., exprN}*/
 	;
 
 bodyexprs

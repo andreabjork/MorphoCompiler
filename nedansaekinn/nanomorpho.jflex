@@ -33,10 +33,6 @@
 public int getLine() { return yyline; }
 public int getColumn() { return yycolumn; }
 
-%}
-
-%{
-
 public NanoMorphoParser yyparser;
 
 public NanoMorphoLexer( java.io.Reader r, NanoMorphoParser yyparser )
