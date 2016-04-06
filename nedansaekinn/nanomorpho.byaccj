@@ -3,6 +3,8 @@
 	import java.util.*;
 %}
 
+%right '='
+%right RETURN
 %left OPERATOR
 %token <sval> OPERATOR
 %token <sval> LITERAL,NAME
@@ -11,7 +13,7 @@
 %type <obj> program
 %type <obj> function
 %type <obj> body,bodyexprs
-%type <obj> exprs, expr
+%type <obj> exprs, expr, args, nonEmptyArgs
 %type <obj> smallexpr, ifexpr, elsebody
 %type <ival> ids,decls, decl
 %type <sval> fname,op
@@ -45,6 +47,14 @@ function
 		}
 	;
 
+args	:	/*empty*/
+	|	nonEmptyArgs		
+	;
+
+nonEmptyArgs	:	nonEmptyArgs ',' expr
+		|	expr
+		;
+
 ids
 	:	/*empty*/		{ $$=0; }
 	|	ids ',' NAME 		{ addVar($3); $$=$1+1; }
@@ -63,22 +73,22 @@ decl
 	;
 
 exprs
-    :   /*empty*/           {$$=new Vector<Object>();}
-	|	expr exprs  		{ ((Vector<Object>)($1)).add($2); $$=$1;}
+    	:   /*empty*/           {$$=new Vector<Object>();}
+	|	expr ';' exprs	{ ((Vector<Object>)($1)).add($3); $$=$1;}
 	;
 
 expr
-	:	smallexpr op expr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
+	:	expr OPERATOR expr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
 	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+	|	NAME '=' expr				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), $3};} 		/*{CodeType.ASSIGN, argloc, expr()}*/
+	|	RETURN expr				    { $$ = new Object[]{CodeType.RETURN, $2};} 						/*{CodeType.RETURN, expr}*/
 	;
 
 
 smallexpr
 	:	NAME 			            { $$ = new Object[]{CodeType.NAME, findVar($1)};} 						/*{CodeType.NAME, nameLoc}*/
-	|	NAME '=' expr				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), $3};} 		/*{CodeType.ASSIGN, argloc, expr()}*/
-	|	NAME '(' ids ')'			{ $$ = new Object[]{CodeType.CALL, $1, $3};} 				/*{CodeType.CALL, name, args}*/
-	|	RETURN expr				    { $$ = new Object[]{CodeType.RETURN, $2};} 						/*{CodeType.RETURN, expr}*/
-	|	op expr				        { $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
+	|	NAME '(' args ')'			{ $$ = new Object[]{CodeType.CALL, $1, $3};} 				/*{CodeType.CALL, name, args}*/
+	|	op smallexpr				        { $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
 	|	LITERAL				        { $$ = new Object[]{CodeType.LITERAL, $1};} 							/*{CodeType.LITERAL, literal}*/
 	|	'(' expr ')'				{ $$ = new Object[]{CodeType.PRIOR, $2};} 					/*{CodeType.PRIOR, expr}*/
 	|	ifexpr				        { $$ = $1;} 							 								/*{CodeType.IF,cond,then,else}*/
