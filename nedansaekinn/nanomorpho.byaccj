@@ -212,7 +212,7 @@ body
 	  	throws IOException
 	{
 		NanoMorphoParser yyparser = new NanoMorphoParser(new FileReader(args[0]));
-		name = args[0];//.substring(0,args[0].lastIndexOf('.'));
+		name = args[0].substring(0,args[0].lastIndexOf('.'));
 
 		writer = new PrintWriter(name+".masm", "UTF-8");    
         yyparser.yyparse();
