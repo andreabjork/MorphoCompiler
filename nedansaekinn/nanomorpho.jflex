@@ -53,7 +53,7 @@ _INT={_DIGIT}+
 _STRING=\"([^\"\\]|\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|(\\[0-3][0-7][0-7])|\\[0-7][0-7]|\\[0-7])*\"
 _CHAR=\'([^\'\\]|\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|(\\[0-3][0-7][0-7])|(\\[0-7][0-7])|(\\[0-7]))\'
 _DELIM=[()\}\{,;=]
-_OPERATOR=[\+\-*/!%&><\:\^\~&|?=]+
+_OPERATOR=[\+\-*/%><\:\^\~?=]+
 _NAME=([:letter:]|[]|{_DIGIT})+
 
 %%
@@ -96,6 +96,21 @@ _NAME=([:letter:]|[]|{_DIGIT})+
 
 "return" {
 	return NanoMorphoParser.RETURN;
+}
+
+
+"&&" {
+	return NanoMorphoParser.AND;
+}
+
+
+"||" {
+	return NanoMorphoParser.OR;
+}
+
+
+"!" {
+	return NanoMorphoParser.NOT;
 }
 
 {_NAME} {

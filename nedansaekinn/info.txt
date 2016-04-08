@@ -32,3 +32,19 @@ java -jar morpho.jar LexerTest2
 % NanoMorphoParser LexerTest2
 % morpho -c LexerTest2.masm
 % morpho LexerTest2
+
+
+// TODO:
+- Koma í veg fyrir óþarfa _4, _5 etc í lok þula
+- Koma í veg fyrir óþarfa return ?
+- Bæta við &&, ||, ! -> Sjá gamla nanolisp verkefnið
+- Laga null gildið
+- Prufa fleiri prufuforrit
+- Leyfa skilgreiningar á breytum í body
+- Coroutines/tasks
+- Exceptions, try-catch throw etc
+
+
+- Bálkmótun?
+
+

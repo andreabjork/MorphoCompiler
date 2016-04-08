@@ -6,15 +6,16 @@
 %right '='
 %right RETURN
 %left OPERATOR
+%left AND, OR, NOT
 %token <sval> OPERATOR
 %token <sval> LITERAL,NAME /*Ath forgang*/
 %token IF,ELSE,ELSIF,WHILE,VAR
 %token RETURN,AND,OR,NOT
 %type <obj> program
 %type <obj> function
-%type <obj> body,bodyexprs
+%type <obj> body
 %type <obj> exprs, expr, args, nonEmptyArgs
-%type <obj> smallexpr, ifexpr, elsebody
+%type <obj> smallexpr, andexpr, notexpr, orexpr, ifexpr, elsebody
 %type <ival> ids,decls, decl
 %type <sval> fname,op
 
@@ -42,20 +43,20 @@ function
 			funcIm.add($4); // Add ids (number of arguments)
 			funcIm.add($7); // Add decls
 
-            Object[] allExprs = ((Object[])($8));
-			for(Object[] expr : allExprs) funcIm.add(expr);
+            Object[] allExprs = (((Vector<Object>)($8)).toArray());
+			for(Object expr : allExprs) funcIm.add(expr);
 			$$=funcIm.toArray();
 		}
 	;
 
 args
     :	/*empty*/      {$$ = new Vector<Object>();}
-	|	nonEmptyArgs   {((Vector<Object>)($$)).add($1);}
+	|	nonEmptyArgs   {$$=$1;}
 	;
 
 nonEmptyArgs
-        :	nonEmptyArgs ',' expr  { ((Vector<Object>)($1)).add($3); $$=$1; }
-		|	expr    { $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+        :	nonEmptyArgs ',' expr  { ((Vector<Object>)($1)).add(((Vector<Object>)($3)).toArray()); $$=$1; }
+		|	expr    { $$=new Vector<Object>(); ((Vector<Object>)($$)).add(((Vector<Object>)($1)).toArray());}
 		;
 
 ids
@@ -70,32 +71,46 @@ decls
 	;
 
 decl
-	:	/*empty*/		{ $$ = 0; }
-	|	decl ',' NAME		{ addVar($3); $$=$1+1; }
-	|	VAR NAME {addVar($2); $$=$$+1;}
+	:	decl ',' NAME		{ addVar($3); $$=$1+1; }
+	|	VAR NAME {addVar($2); $$=1;}
 	;
 
 exprs
     :   /*empty*/           {$$=new Vector<Object>();}
-	|	expr ';' exprs	{ ((Vector<Object>)($3)).add(new Object[]{$1}); $$=$3;}
+	|	exprs expr ';'	{ ((Vector<Object>)($1)).add(((Vector<Object>)($2)).toArray()); $$=$1;}
 	;
 
 expr
-	:	expr OPERATOR expr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
+	:	expr OPERATOR smallexpr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
 	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
-	|	NAME '=' expr				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), ((Vector<Object>)($3)).toArray()};} 		/*{CodeType.ASSIGN, argloc, expr()}*/
-	|	RETURN expr				    { $$ = new Object[]{CodeType.RETURN, ((Vector<Object>)($2)).toArray()};} 						/*{CodeType.RETURN, expr}*/
+	|	andexpr				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+	|	notexpr				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+	|	orexpr				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
 	;
 
 
 smallexpr
 	:	NAME 			            { $$ = new Object[]{CodeType.NAME, findVar($1)};} 						/*{CodeType.NAME, nameLoc}*/
 	|	NAME '(' args ')'			{ $$ = new Object[]{CodeType.CALL, $1, ((Vector<Object>)($3)).toArray()};} 				/*{CodeType.CALL, name, args}*/
+	|	NAME '=' expr 				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), ((Vector<Object>)($3)).toArray()};}
+	|	RETURN expr 				{ $$ = new Object[]{CodeType.RETURN, ((Vector<Object>)($2)).toArray()};}
 	|	op smallexpr				{ $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
 	|	LITERAL				        { $$ = new Object[]{CodeType.LITERAL, $1};} 							/*{CodeType.LITERAL, literal}*/
-	|	'(' expr ')'				{ $$ = new Object[]{CodeType.PRIOR, $2};} 					/*{CodeType.PRIOR, expr}*/
+	|	'(' expr ')'				{ $$ = new Object[]{CodeType.PRIOR, ((Vector<Object>)($2)).toArray()};} 					/*{CodeType.PRIOR, expr}*/
 	|	ifexpr				        { $$ = $1;} 							 								/*{CodeType.IF,cond,then,else}*/
-	|	WHILE '(' expr ')' body 	{$$ = new Object[]{CodeType.WHILE, $3, $5};}					/*{CodeType.WHILE, cond, body}*/
+	|	WHILE '(' expr ')' body 	{$$ = new Object[]{CodeType.WHILE, ((Vector<Object>)($3)).toArray(), $5};}					/*{CodeType.WHILE, cond, body}*/
+	;
+
+andexpr
+	:	expr AND expr 			{ $$ = new Object[]{CodeType.AND, ((Vector<Object>)($1)).toArray(), ((Vector<Object>)($3)).toArray()};}
+	;
+
+notexpr
+	:	NOT expr 					{ $$ = new Object[]{CodeType.NOT, ((Vector<Object>)($2)).toArray()};}
+	;
+
+orexpr	
+	:	expr OR expr 				{ $$ = new Object[]{CodeType.OR, ((Vector<Object>)($1)).toArray(), ((Vector<Object>)($3)).toArray()};}
 	;
 
 op
@@ -107,22 +122,17 @@ fname
     ;
 
 ifexpr
-	:	IF '(' expr ')' body elsebody 	{$$ = new Object[]{CodeType.IF, $3, $5, $6};}
+	:	IF '(' expr ')' body elsebody 	{$$ = new Object[]{CodeType.IF, ((Vector<Object>)($3)).toArray(), $5, $6};}
 	;
 
 elsebody
-	:  /*empty*/ 	{$$ = null;} /*Should change this to an object of null, empty object or something else than null*/
-	|  ELSIF '(' expr ')' body elsebody  {$$ = new Object[]{CodeType.IF, $3, $5, $6};}
+	:  /*empty*/ 	{$$ = new Object[]{CodeType.ELSE, null};} /*Should change this to an object of null, empty object or something else than null*/
+	|  ELSIF '(' expr ')' body elsebody  {$$ = new Object[]{CodeType.IF, ((Vector<Object>)($3)).toArray(), $5, $6};}
 	|  ELSE body 	{$$ = new Object[]{CodeType.ELSE, $2};}
 	;
 
 body
-	:	'{' bodyexprs '}'	{$$ = ((Vector<Object>)($2)).toArray();} 			/*{expr0, expr1, ..., exprN}*/
-	;
-
-bodyexprs
-	:	bodyexprs expr ';'		{ ((Vector<Object>)($1)).add($2); $$=$1; }
-	|	expr ';'				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1); }
+	:	'{' exprs '}'	{$$ = ((Vector<Object>)($2)).toArray();} 			/*{expr0, expr1, ..., exprN}*/
 	;
 
 %%
@@ -131,7 +141,7 @@ bodyexprs
     // mögulegu gerðir af segðum sem milliþula
     // (intermediate code) getur innihaldið.
     enum CodeType {
-        NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE, ELSE, PRIOR
+        NAME, ASSIGN, CALL, RETURN, OP, LITERAL, IF, WHILE, ELSE, PRIOR, AND, OR, NOT
     };
 
 
@@ -203,15 +213,18 @@ bodyexprs
 	{
 		NanoMorphoParser yyparser = new NanoMorphoParser(new FileReader(args[0]));
 		name = args[0];//.substring(0,args[0].lastIndexOf('.'));
-		yyparser.yyparse();
+
+		writer = new PrintWriter(name+".masm", "UTF-8");    
+        yyparser.yyparse();
+        writer.close();
+		
 	}
 
 	// Use: emit(line);
     // Pre:  line er lína í lokaþulu.
     // Post:  Búið er að skrifa línuna á aðalúttak.
     private static void emit( String line ) {
-        System.out.println(line);
-        //writer.println(line);
+        writer.println(line);
     }
 
    private static void generateProgram(String name, Object[] p) {
@@ -236,7 +249,9 @@ bodyexprs
             emit("(MakeVal null)");
             emit("(Push)");
         }
-        for(int i=3; i!=f.length; i++) generateExpr((Object[])f[i]);
+        for(int i=3; i!=f.length; i++) {
+        	generateExpr((Object[])f[i]);
+        }
         emit("(Return)");
         emit("];");
     }
@@ -343,6 +358,27 @@ bodyexprs
                 generateSmallExpr((Object[])e[2]);
                 emit("(Call \""+e[1]+"[f1]\" "+1);
                 return;
+            case AND: 
+            	// e = {AND, e1, e2}
+            	int labFalse = newLab();
+            	generateExpr((Object[])e[1]);
+            	emit("(GoFalse _"+labFalse+")");
+            	generateExpr((Object[])e[2]);
+            	emit("_"+labFalse+":");
+            	return;
+            case OR:
+            	// e = {OR, e1, e2}
+            	int labTrue = newLab();
+            	generateExpr((Object[])e[1]);
+            	emit("(GoTrue _"+labTrue+")");
+            	generateExpr((Object[])e[2]);
+            	emit("_"+labTrue+":");
+            	return;
+            case NOT:
+            	// e = {NOT, e}
+            	generateExpr((Object[])e[1]);
+            	emit("(Not)");
+            	return;
             case PRIOR:
                 // e = {PRIOR, expr}
                 generateExpr((Object[])e[1]);
@@ -395,6 +431,7 @@ bodyexprs
 
     private static void generateBody(Object[] e) {
         // e = {expr0, expr1, ..., exprN}
+        if(e == null) return;
         for(int i=0; i<e.length; i++) {
             generateExpr((Object[])e[i]);
         }
