@@ -16,5 +16,5 @@ test(n) {
 }
 
 main() {
-	writeln("You have chosen... " ++ test(3));
+	writeln("You have chosen... " ++ test(2));
 }
