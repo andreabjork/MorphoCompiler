@@ -1,0 +1,16 @@
+testANDORNOT() {
+	var s;
+	if(true && (false || !false)) {
+		s = s ++ "This seems to be working correctly.";
+	};
+
+	if(false || (true && !true)) {
+		s = s ++ "Definitely not working correctly";
+	};
+
+	return s;
+}
+
+main() {
+	writeln("The output of the test is: " ++ testANDORNOT());
+}

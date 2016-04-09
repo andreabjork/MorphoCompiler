@@ -1,3 +1,38 @@
+---------------------------------- BUILD AND RUN -----------------------------------
+------------------------------------------------------------------------------------
+After unzipping the project into the desired location, cd
+into MorphoCompiler/nedansaekinn/source and do:
+
+% make
+
+After that you can write project files <filename>.nm in the Workspace
+folder and to compile them, do
+
+% ./nanomorpho.sh -c <filename>.nm
+
+and run them from the Workspace with
+
+% ./nanomorpho.sh <filename>
+
+
+Of course, if you would like to create a symbolic link from the nedansaekinn folder you can do so with
+
+sudo ln -s Workspace/nanomorpho.sh /usr/local/bin/nanomorpho
+
+and then simply compile and run using:
+
+% nanomorpho -c <filename>.nm
+% nanomorpho <filename>
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+
+
+
+
+
+// -------------------- GAMALT, MANUAL BUILD OG RUN
+Manual build 
+
 Jflex:
 
 java -jar jflex-1.6.0.jar nanomorpho.jflex
@@ -11,7 +46,7 @@ Java compile:
 
 javac NanoMorphoLexer.java NanoMorphoParser.java NanoMorphoParserVal.java
 
-Keyrsla:
+Keyrsla ------ :
 
 java NanoMorphoParser LexerTest2
 
@@ -24,27 +59,13 @@ java -jar morpho.jar -c LexerTest2.masm
 java -jar morpho.jar LexerTest2
 
 
----------------- eða, linux megin:
-
-% jflex nanomorpho.jflex
-% byaccj -Jclass NanoMorphoParser -v nanomorpho.byaccj
-% javac NanoMorphoLexer.java NanoMorphoParser.java NanoMorphoParserVal.java
-% NanoMorphoParser LexerTest2
-% morpho -c LexerTest2.masm
-% morpho LexerTest2
-
-
 // TODO:
 - Koma í veg fyrir óþarfa _4, _5 etc í lok þula
 - Koma í veg fyrir óþarfa return ?
-- Bæta við &&, ||, ! -> Sjá gamla nanolisp verkefnið
-- Laga null gildið
-- Prufa fleiri prufuforrit
+X Bæta við &&, ||, ! -> Sjá gamla nanolisp verkefnið
+X Laga null gildið
+X Prufa fleiri prufuforrit
 - Leyfa skilgreiningar á breytum í body
-- Coroutines/tasks
-- Exceptions, try-catch throw etc
 
-
-- Bálkmótun?
 
 
