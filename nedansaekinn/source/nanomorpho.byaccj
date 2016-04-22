@@ -80,37 +80,38 @@ exprs
 	|	exprs expr ';'	{ ((Vector<Object>)($1)).add(((Vector<Object>)($2)).toArray()); $$=$1;}
 	;
 
-expr
+expr // Returns vector of objects but is converted to array everywhere where we define an expr
 	:	expr OPERATOR smallexpr 	{ ((Vector<Object>)($1)).add($2); ((Vector<Object>)($1)).add($3); $$=$1;}
-	|	smallexpr 			{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
-	|	andexpr				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
-	|	notexpr				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
-	|	orexpr				{ $$=new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+	|	orexpr				{ $$ = $1;}
+    |	NAME '=' expr 		{ $$ = new Vector<Object>(); ((Vector<Object>)($$)).add(new Object[]{CodeType.ASSIGN, findVar($1), ((Vector<Object>)($3)).toArray()});}
+    |	RETURN expr 		{ $$ = new Vector<Object>(); ((Vector<Object>)($$)).add(new Object[]{CodeType.RETURN, ((Vector<Object>)($2)).toArray()});}
 	;
 
 
-smallexpr
+orexpr
+    :	orexpr OR andexpr 				{ $$ = new Vector<Object>(); ((Vector<Object>)($$)).add(new Object[]{CodeType.OR, ((Vector<Object>)($1)).toArray(), ((Vector<Object>)($3)).toArray()});}
+    |   andexpr                         { $$ = $1;}
+    ;
+
+
+andexpr
+    :	andexpr AND notexpr 			{ $$ = new Vector<Object>(); ((Vector<Object>)($$)).add(new Object[]{CodeType.AND, ((Vector<Object>)($1)).toArray(), ((Vector<Object>)($3)).toArray()});}
+    |   notexpr                         { $$ = $1;}
+    ;
+
+notexpr
+    :	NOT notexpr 					{ $$ = new Vector<Object>(); ((Vector<Object>)($$)).add(new Object[]{CodeType.NOT, ((Vector<Object>)($2)).toArray()});}
+    |   smallexpr                       { $$ = new Vector<Object>(); ((Vector<Object>)($$)).add($1);}
+    ;
+
+smallexpr // always returns object array
 	:	NAME 			            { $$ = new Object[]{CodeType.NAME, findVar($1)};} 						/*{CodeType.NAME, nameLoc}*/
 	|	NAME '(' args ')'			{ $$ = new Object[]{CodeType.CALL, $1, ((Vector<Object>)($3)).toArray()};} 				/*{CodeType.CALL, name, args}*/
-	|	NAME '=' expr 				{ $$ = new Object[]{CodeType.ASSIGN, findVar($1), ((Vector<Object>)($3)).toArray()};}
-	|	RETURN expr 				{ $$ = new Object[]{CodeType.RETURN, ((Vector<Object>)($2)).toArray()};}
 	|	op smallexpr				{ $$ = new Object[]{CodeType.OP, $1, $2};} 							/*{CodeType.OP, OPsymbol, expr}*/
 	|	LITERAL				        { $$ = new Object[]{CodeType.LITERAL, $1};} 							/*{CodeType.LITERAL, literal}*/
 	|	'(' expr ')'				{ $$ = new Object[]{CodeType.PRIOR, ((Vector<Object>)($2)).toArray()};} 					/*{CodeType.PRIOR, expr}*/
 	|	ifexpr				        { $$ = $1;} 							 								/*{CodeType.IF,cond,then,else}*/
 	|	WHILE '(' expr ')' body 	{$$ = new Object[]{CodeType.WHILE, ((Vector<Object>)($3)).toArray(), $5};}					/*{CodeType.WHILE, cond, body}*/
-	;
-
-andexpr
-	:	expr AND expr 			{ $$ = new Object[]{CodeType.AND, ((Vector<Object>)($1)).toArray(), ((Vector<Object>)($3)).toArray()};}
-	;
-
-notexpr
-	:	NOT expr 					{ $$ = new Object[]{CodeType.NOT, ((Vector<Object>)($2)).toArray()};}
-	;
-
-orexpr	
-	:	expr OR expr 				{ $$ = new Object[]{CodeType.OR, ((Vector<Object>)($1)).toArray(), ((Vector<Object>)($3)).toArray()};}
 	;
 
 op
@@ -224,6 +225,7 @@ body
     // Pre:  line er lína í lokaþulu.
     // Post:  Búið er að skrifa línuna á aðalúttak.
     private static void emit( String line ) {
+        //System.out.println(line);
         writer.println(line);
     }
 
@@ -278,10 +280,14 @@ body
         // generateSmallExpr();
         // (Call #opf[2] 2)
         // ...
-        // (Call #opf[2] 2) 
+        // (Call #opf[2] 2)
         generateSmallExpr((Object[])e[0]); // Alltaf fyrir fyrsta expr
+
+
         if(e.length == 1) return;
-        for(int i=1; i!=e.length-1; i++) {
+        // e = 3 means 1 + 2, we catch 1 at e[0], we need to catch
+        // + 2 with e[1] and e[2] and so we need to make sure i+1 < e.length
+        for(int i=1; i < e.length-1; i=i+2) {
             // Put our last expr on the stack
             emit("(Push)");
             String op = e[i].toString();

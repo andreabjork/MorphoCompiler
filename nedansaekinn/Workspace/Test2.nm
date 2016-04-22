@@ -1,11 +1,15 @@
 testANDORNOT() {
-	var s;
+	var s, a, b;
+	a = 1 - (2+4);
+	b = 1 - 2 + 4;
+	writeln("A is "++a);
+	writeln("B is "++b);
 	s = "";
-	if(true && (false || !false)) {
+	if(true && false || !false) {
 		s = s ++ "This seems to be working correctly.";
 	};
 
-	if(false || (true && !true)) {
+	if(false || true && !true) {
 		s = s ++ "Definitely not working correctly";
 	};
 
