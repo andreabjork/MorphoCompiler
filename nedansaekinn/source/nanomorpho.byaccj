@@ -4,6 +4,7 @@
 %}
 
 %right '='
+%right ':'
 %right RETURN
 %left OPERATOR
 %left AND, OR, NOT
