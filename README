@@ -1,0 +1,18 @@
+
+// ======================================================================
+// 			COMPILER FOR NANOMORPHO
+// ----------------------------------------------------------------------
+// This project is a compiler for the NanoMorpho programming language. 
+// The master branch is for all work-in-progress, including a top-down
+// compiler using pure Java, as well as bottom-up compiler built with Java
+// and using byaccj and jflex tools.
+//
+// Checkout the dev branch to build from source or the release branch if 
+// you simply want a runnable version of this project.
+//
+// See handbok.pdf for more info on NanoMorpho.
+//
+//						Andrea Björk Björnsdóttir
+//							       April 2016
+// ======================================================================
+
