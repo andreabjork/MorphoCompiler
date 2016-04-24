@@ -1,0 +1,74 @@
+
+// ======================================================================
+// 			COMPILER FOR NANOMORPHO
+// ----------------------------------------------------------------------
+// This is the development version of the NanoMorpho programming language.
+// This project can be built from source and tested in terminal.
+// 
+// See handbok.pdf for more info on NanoMorpho.
+//
+//						Andrea Björk Björnsdóttir
+//							       April 2016
+// ======================================================================
+
+Linux instructions:
+
+Extract folder into desired location.
+
+cd into nanomorpho/source and do:
+
+% make
+
+After that you can write project files <filename>.nm in the Workspace
+folder and to compile them, do
+
+% ./nanomorpho.sh -c <filename>.nm
+
+and run them from the Workspace with
+
+% ./nanomorpho.sh <filename>
+
+
+Of course, if you would like to create a symbolic link from the nanomorpho folder you can do so with
+
+% sudo ln -s Workspace/nanomorpho.sh /usr/local/bin/nanomorpho
+
+and then simply compile and run using:
+
+% nanomorpho -c <filename>.nm
+% nanomorpho <filename>
+
+
+// ===============================
+// Manual compilation from source: 
+// ===============================
+
+If you need to compile separately the jflex, byaccj and java files, you can do so with the following commands:
+
+Jflex:
+
+% java -jar jflex-1.6.0.jar nanomorpho.jflex
+
+byacc:
+
+% ./yacc.linux -J -Jclass=NanoMorphoParser -v nanomorpho.byaccj
+
+Java compile:
+
+javac NanoMorphoLexer.java NanoMorphoParser.java NanoMorphoParserVal.java
+
+// =======================================================
+// Manual compilation and running of nanomorpho programs :
+// =======================================================
+
+java NanoMorphoParser example.nm
+
+This will create example.masm, compile that with morpho:
+
+java -jar morpho.jar -c example.masm
+
+This will create example.mexe which can be run with Morpho:
+
+java -jar morpho.jar example
+
+
