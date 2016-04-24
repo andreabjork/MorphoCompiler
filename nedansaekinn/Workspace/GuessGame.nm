@@ -1,0 +1,25 @@
+;; Guessing game - Guess a number between 1 and 100!
+;; Loaned example program by Leó Jóhannsson
+
+main(){
+	var line, number, firstGuess, numGuesses;
+	firstGuess = false;
+	number = (random(100)+1);
+	numGuesses = 0;
+	writeln("I have picked a number between 1 and 100! Now it's time for you to guess!");
+	while(line != number){
+		if(firstGuess){
+			writeln("Guess again!");
+		} else {
+			firstGuess = true;
+		};
+		line = int(readLine());
+		if(line>number){
+			writeln("Too high.");
+		} elsif (line < number){
+			writeln("Too low.");
+		};
+		numGuesses = numGuesses+1;
+	};
+	writeln("You did it! You figured out my number in "++numGuesses++" tries.");
+}
