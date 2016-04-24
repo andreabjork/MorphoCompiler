@@ -3,7 +3,7 @@ NanoMorphoLexer.class NanoMorphoParser.class NanoMorphoParserVal.class: NanoMorp
 NanoMorphoLexer.java: nanomorpho.jflex
 	java -jar jflex-1.6.0.jar nanomorpho.jflex
 NanoMorphoParser.java NanoMorphoParserVal.java: nanomorpho.byaccj
-	./byacc.exe -J -Jclass=NanoMorphoParser nanomorpho.byaccj
+	./yacc.linux -J -Jclass=NanoMorphoParser nanomorpho.byaccj
 
 
 clean:
