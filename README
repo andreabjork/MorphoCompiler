@@ -2,7 +2,8 @@
 // ======================================================================
 // 			COMPILER FOR NANOMORPHO
 // ----------------------------------------------------------------------
-// This is the development version of the NanoMorpho programming language.
+// This is the development version of the compiler for the NanoMorpho 
+// programming language.
 // This project can be built from source and tested in terminal.
 // 
 // See handbok.pdf for more info on NanoMorpho.
