@@ -1,0 +1,13 @@
+testLists() {
+	var list, count;
+	list = 1:(2:(3:(4:null)));
+	while(list != null) {
+		writeln("Head: "++head(list));
+		list = tail(list);
+	};
+
+}
+
+main() {
+	testLists();
+}

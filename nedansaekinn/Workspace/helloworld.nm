@@ -1,0 +1,7 @@
+hello(name) {
+	writeln("Hello "++name);
+}
+
+main() {
+	hello("World");
+}
