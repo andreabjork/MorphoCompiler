@@ -1,0 +1,39 @@
+
+// ======================================================================
+// 			COMPILER FOR NANOMORPHO
+// ----------------------------------------------------------------------
+// This is the released version of the compiler for the NanoMorpho 
+// programming language. 
+// That simply means the compiler is ready to use out of the box, no need
+// to build anything from source.
+//
+//
+// See handbok.pdf for more info on NanoMorpho.
+//
+//						Andrea Björk Björnsdóttir
+//							       April 2016
+// ======================================================================
+
+Linux instructions:
+
+Extract folder into desired location. You can then create nanomorpho programs 
+(.nm files) under nanomorpho/Workspace. 
+
+To compile them, do
+
+% ./nanomorpho.sh -c <filename>.nm
+
+and run them from the Workspace with
+
+% ./nanomorpho.sh <filename>
+
+
+If you would like to create a symbolic link from the nanomorpho folder you can do so with
+
+% sudo ln -s Workspace/nanomorpho.sh /usr/local/bin/nanomorpho
+
+and then simply compile and run using:
+
+% nanomorpho -c <filename>.nm
+% nanomorpho <filename>
+
